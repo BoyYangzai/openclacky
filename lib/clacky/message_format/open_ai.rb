@@ -217,9 +217,13 @@ module Clacky
       # unchanged, preserving the provider default for all models.
       #
       # Single source of truth for reasoning param mapping — shared with
-      # MessageFormat::OpenAIResponses (the Responses API accepts the same
-      # top-level fields).
-      def self.apply_reasoning_params(body, model, reasoning_effort)
+      # MessageFormat::OpenAIResponses.
+      #
+      # @param responses_api [Boolean] emit the generic effort as the Responses
+      #   API's nested `reasoning: { effort: ... }`. The top-level
+      #   `reasoning_effort` field is Chat Completions only — the Responses API
+      #   rejects it with "Unknown parameter: 'reasoning_effort'".
+      def self.apply_reasoning_params(body, model, reasoning_effort, responses_api: false)
         effort_str = reasoning_effort.to_s
 
         if model.to_s.match?(/\Aglm-5[-.]3/i)
@@ -306,9 +310,22 @@ module Clacky
                    when "xhigh" then "max"
                    else effort_str
                    end
-          body[:reasoning_effort] = effort unless effort.empty?
+          assign_effort(body, effort, responses_api)
         elsif reasoning_effort && !effort_str.empty?
-          body[:reasoning_effort] = effort_str
+          assign_effort(body, effort_str, responses_api)
+        end
+      end
+
+      # Write the resolved effort into the field shape the target API expects.
+      # Chat Completions takes the top-level reasoning_effort; the Responses API
+      # takes reasoning.effort and errors out on the flat field.
+      private_class_method def self.assign_effort(body, effort, responses_api)
+        return if effort.nil? || effort.empty?
+
+        if responses_api
+          body[:reasoning] = { effort: effort }
+        else
+          body[:reasoning_effort] = effort
         end
       end
 

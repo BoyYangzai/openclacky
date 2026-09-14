@@ -78,7 +78,33 @@ RSpec.describe Clacky::MessageFormat::OpenAIResponses do
       content = body[:input][0][:content]
       expect(content[0][:type]).to eq("input_text")
       expect(content[1][:type]).to eq("input_image")
-      expect(content[1][:image_url][:url]).to eq("data:image/png;base64,abc123")
+      expect(content[1][:image_url]).to eq("data:image/png;base64,abc123")
+    end
+
+    it "drops extra block keys that the Responses schema rejects" do
+      messages = [
+        { role: "user", content: [
+          { type: "image_url", image_url: { url: "data:image/png;base64,abc123" }, image_name: "photo.png" }
+        ] }
+      ]
+
+      body = described_class.build_request_body(messages, model, tools, max_tokens, false)
+      expect(body[:input][0][:content][0]).to eq(
+        { type: "input_image", image_url: "data:image/png;base64,abc123" }
+      )
+    end
+
+    it "accepts image_url given directly as a string" do
+      messages = [
+        { role: "user", content: [
+          { type: "image_url", image_url: "data:image/png;base64,abc123", image_name: "photo.png" }
+        ] }
+      ]
+
+      body = described_class.build_request_body(messages, model, tools, max_tokens, false)
+      expect(body[:input][0][:content][0]).to eq(
+        { type: "input_image", image_url: "data:image/png;base64,abc123" }
+      )
     end
 
     it "replaces image_url with text placeholder when vision is not supported" do
@@ -481,7 +507,24 @@ RSpec.describe Clacky::MessageFormat::OpenAIResponses do
         [{ role: "user", content: "Hi" }], "deepseek-r1", [], 100, false,
         reasoning_effort: "high"
       )
-      expect(body[:reasoning_effort]).to eq("high")
+      expect(body[:reasoning]).to eq({ effort: "high" })
+    end
+
+    it "sends the nested reasoning.effort for OpenAI models" do
+      body = described_class.build_request_body(
+        [{ role: "user", content: "Hi" }], "abs-gpt-6-astra", [], 100, false,
+        reasoning_effort: "max"
+      )
+      expect(body[:reasoning]).to eq({ effort: "max" })
+      expect(body).not_to have_key(:reasoning_effort)
+    end
+
+    it "omits the reasoning field when no effort is set" do
+      body = described_class.build_request_body(
+        [{ role: "user", content: "Hi" }], "abs-gpt-6-astra", [], 100, false
+      )
+      expect(body).not_to have_key(:reasoning)
+      expect(body).not_to have_key(:reasoning_effort)
     end
   end
 end

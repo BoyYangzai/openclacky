@@ -53,7 +53,7 @@ module Clacky
           body[:tools] = convert_tools_to_responses_format(tools)
         end
 
-        OpenAI.apply_reasoning_params(body, model, reasoning_effort)
+        OpenAI.apply_reasoning_params(body, model, reasoning_effort, responses_api: true)
 
         body
       end
@@ -156,8 +156,12 @@ module Clacky
           { type: "input_text", text: text }
         when "image_url"
           if vision_supported
-            # Responses API uses input_image with image_url sub-field
-            { type: "input_image", image_url: block[:image_url] }
+            # Responses API takes the URL as a plain string — the Chat
+            # Completions { url: ... } wrapper fails schema validation with
+            # "Invalid 'input': value did not match any expected variant".
+            url = block[:image_url]
+            url = url[:url] || url["url"] if url.is_a?(Hash)
+            { type: "input_image", image_url: url }
           else
             { type: "input_text", text: "[Image content removed - current model does not support vision input]" }
           end
