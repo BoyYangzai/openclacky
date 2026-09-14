@@ -5271,8 +5271,8 @@ body {
   opacity: 0.8;
 }
 .sib-model-option .model-badge.default {
-  background: rgba(63, 185, 80, 0.12);
-  color: #2da44e;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 .sib-model-option .model-badge.lite {
   background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
@@ -6778,8 +6778,7 @@ body {
   border-radius: 20px;
   letter-spacing: 0.3px;
 }
-.badge-default   { background: rgba(63, 185, 80, 0.12); color: #2da44e; border: 1px solid rgba(63, 185, 80, 0.35); }
-[data-theme="dark"] .badge-default { background: #0d3818; color: #3fb950; border: 1px solid #238636; }
+.badge-default   { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
 .badge-lite      { background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent); color: var(--color-accent-primary); border: 1px solid color-mix(in srgb, var(--color-accent-primary) 35%, transparent); }
 [data-theme="dark"] .badge-lite    { background: #1a2f4e; color: var(--color-accent-primary); border: 1px solid var(--color-accent-primary); }
 .badge-secondary { background: var(--color-border-secondary); color: var(--color-text-secondary); border: 1px solid var(--color-border-primary); }
@@ -11841,7 +11840,7 @@ body.setup-mode[data-theme="dark"] {
   white-space: nowrap;
 }
 .badge-running  { background: var(--color-success-bg);  color: var(--color-success); border: 1px solid var(--color-success-border); }
-.badge-enabled  { background: #1a2f4e; color: var(--color-accent-primary); border: 1px solid var(--color-accent-primary); }
+.badge-enabled  { background: var(--color-accent-soft); color: var(--color-accent-primary); border: 1px solid color-mix(in srgb, var(--color-accent-primary) 35%, transparent); }
 .badge-disabled { background: var(--color-bg-tertiary); color: var(--color-text-muted); border: 1px solid var(--color-border-primary); }
 
 /* ── Channel card body ───────────────────────────────────────────────────── */
