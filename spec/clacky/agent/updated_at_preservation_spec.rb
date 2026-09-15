@@ -77,4 +77,53 @@ RSpec.describe "Agent updated_at preservation (fail-safe default)" do
     data = agent.to_session_data
     expect(Time.parse(data[:updated_at])).to be_within(2).of(before)
   end
+
+  it "keeps the last written stamp when a later save passes no timestamp" do
+    saved = round_trip(agent.to_session_data(updated_at: Time.now))
+    saved[:updated_at] = frozen_time
+
+    restored = new_agent
+    restored.restore_session(saved)
+
+    write_time = Time.now
+    restored.to_session_data(updated_at: write_time)
+
+    idle_touch = restored.to_session_data(status: :success)
+    expect(Time.parse(idle_touch[:updated_at])).to be_within(2).of(write_time)
+  end
+
+  it "does not walk disk updated_at back to the restore-time stamp on a later no-timestamp save" do
+    Dir.mktmpdir do |dir|
+      sm = Clacky::SessionManager.new(sessions_dir: dir)
+      stale = round_trip(agent.to_session_data(updated_at: Time.now))
+      stale[:updated_at] = frozen_time
+
+      restored = new_agent
+      restored.restore_session(stale)
+
+      write_time = Time.now
+      sm.save(restored.to_session_data(updated_at: write_time))
+      sm.save(restored.to_session_data(status: :success))
+
+      disk = round_trip(sm.load(session_id))
+      expect(Time.parse(disk[:updated_at])).to be_within(5).of(write_time)
+    end
+  end
+
+  it "repairs a stale file on disk once the healed session is saved again" do
+    Dir.mktmpdir do |dir|
+      sm = Clacky::SessionManager.new(sessions_dir: dir)
+      stale = round_trip(agent.to_session_data(updated_at: Time.now))
+      stale[:updated_at] = frozen_time
+      stale[:messages] = [{ role: "user", content: "hi", created_at: Time.now.to_f }]
+      sm.save(stale)
+
+      restored = new_agent
+      restored.restore_session(sm.load(session_id))
+
+      sm.save(restored.to_session_data(status: :success))
+
+      expect(Time.parse(sm.load(session_id)[:updated_at])).to be_within(5).of(Time.now)
+    end
+  end
 end

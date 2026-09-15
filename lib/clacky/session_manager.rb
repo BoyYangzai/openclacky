@@ -5,6 +5,7 @@ require "fileutils"
 require "securerandom"
 require "open3"
 require "set"
+require "time"
 
 module Clacky
   class SessionManager
@@ -370,8 +371,26 @@ module Clacky
         sessions[(source == "regular" ? keep : grouped_keep)..] || []
       end
 
+      # Ranking above works off the cheap header, which cannot see the messages
+      # that the heal in load_session_file derives the real last activity from.
+      # A session written by an older build therefore ranks by a stale stamp and
+      # lands in the victims purely for being quiet on paper while it was in use
+      # recently. Give those candidates a full parse before evicting them.
+      victims = victims.reject { |session| healed_activity?(session) }
+
       victims.each { |session| soft_delete(session[:session_id]) }
       victims.size
+    end
+
+    # True when a header-ranked candidate carries a stored stamp older than what
+    # a full parse reports, i.e. the ranking underestimated its last activity.
+    # Costs one parse per candidate, which is the tail of an already sorted
+    # list, not the full corpus.
+    private def healed_activity?(meta)
+      full = load_session_file(meta[:_path])
+      return false unless full
+
+      full[:updated_at].to_s > (meta[:updated_at] || meta[:created_at]).to_s
     end
 
     # A session belongs to the "regular" pool unless it is a folded grouped
@@ -488,9 +507,41 @@ module Clacky
     end
 
     def load_session_file(filepath)
-      JSON.parse(File.read(filepath), symbolize_names: true)
+      data = JSON.parse(File.read(filepath), symbolize_names: true)
+      heal_stale_updated_at!(data)
+      data
     rescue JSON::ParserError, Errno::ENOENT
       nil
+    end
+
+    # Trust the newest message over a stale updated_at.
+    #
+    # Sessions written before the serializer started remembering its own last
+    # stamp are already on disk with an updated_at that goes back to whenever
+    # the agent was restored — months behind the conversation. Left alone,
+    # such a session sorts (and is displayed) as old, "load more" walks past
+    # it, and cleanup ranks it as stale enough to delete.
+    private def heal_stale_updated_at!(data)
+      newest = nil
+      (data[:messages] || []).each do |message|
+        ts = message[:created_at]
+        next unless ts.is_a?(Numeric)
+        newest = ts if newest.nil? || ts > newest
+      end
+      return unless newest
+
+      stamped = begin
+        data[:updated_at] && Time.parse(data[:updated_at].to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+      # updated_at is written as whole seconds while message timestamps are
+      # floats, so a healthy session saved in the same second as its last
+      # message looks stale by a few hundred milliseconds. Rewriting it would
+      # produce the identical string, so tolerate that much drift; genuine
+      # drift is minutes or days and is still caught.
+      newest_at = Time.at(newest)
+      data[:updated_at] = newest_at.iso8601 if stamped.nil? || newest_at - stamped > 1
     end
 
     # Read only the small scalar header of a session file without parsing the

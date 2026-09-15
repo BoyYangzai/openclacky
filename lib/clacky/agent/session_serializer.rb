@@ -228,12 +228,21 @@ module Clacky
         stats_data[:last_error]     = error_message if status == :error && error_message
         stats_data[:last_error_raw] = raw_message   if status == :error && raw_message
 
+        # Saves that carry no user-visible activity (idle compression, channel
+        # bookkeeping) pass no timestamp and reuse the last one this agent
+        # wrote. Keeping it in memory rather than falling back to the value
+        # loaded at restore time is what stops those saves from dragging an
+        # actively used session back to the moment it was restored.
+        stamp = updated_at || @persisted_updated_at || Time.now
+        stamp = stamp.iso8601 if stamp.respond_to?(:iso8601)
+        @persisted_updated_at = stamp
+
         {
           session_id: @session_id,
           name: @name,
           pinned: @pinned,
           created_at: @created_at,
-          updated_at: (updated_at || @persisted_updated_at || Time.now.iso8601).then { |v| v.is_a?(String) ? v : v.iso8601 },
+          updated_at: stamp,
           working_dir: @working_dir,
           source: @source.to_s,                      # "manual" | "cron" | "channel" | "setup"
           agent_profile: @agent_profile&.name || "", # "general" | "coding" | custom
