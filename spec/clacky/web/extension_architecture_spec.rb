@@ -160,10 +160,22 @@ RSpec.describe "WebUI extension architecture" do
     end
 
     it "adds persisted creation snapshots while ordinary updates remain patches" do
-      expect(ws_js).to match(/if\s*\(ev\.created\s*&&\s*ev\.session\)\s*\{\s*Sessions\.add\(ev\.session\)/m),
+      expect(ws_js).to match(/if\s*\(ev\.session\s*&&\s*\(ev\.created/),
         "created session_update snapshots must enter the canonical session list"
       expect(ws_js).to match(/else\s*\{\s*Sessions\.patch\(sid,\s*patch\)/m),
         "ordinary session_update snapshots must preserve pagination-safe patch behavior"
+    end
+
+    it "promotes a full snapshot for the session being viewed when it is not listed yet" do
+      # The active session may live only in the extra-session cache (opened from
+      # search or a deep link), which the sidebar never renders. Patching it
+      # would leave the list without a row until a browser reload, so a full
+      # snapshot must be promoted instead -- but only while it is still
+      # unlisted, keeping the patch bookkeeping for rows that already exist.
+      expect(ws_js).to match(/sid\s*===\s*Sessions\.activeId\s*&&\s*!listed/),
+        "an unlisted active session must be promoted out of the extra cache"
+      expect(ws_js).to match(/const listed\s*=\s*Sessions\.all\.some\(s\s*=>\s*s\.id\s*===\s*sid\)/),
+        "promotion must be gated on the session being absent from the canonical list"
     end
 
     it "promotes a creation snapshot out of the extra-session cache" do
