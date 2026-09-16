@@ -81,12 +81,9 @@ RSpec.describe Clacky::Providers do
       it "returns false for openclacky + DeepSeek models (vision-less sidecar)" do
         expect(described_class.supports?("openclacky", :vision,
                                          model_name: "dsk-deepseek-v4-pro")).to be false
+        # V4.1 Flash is natively multimodal, unlike its DeepSeek siblings.
         expect(described_class.supports?("openclacky", :vision,
-                                         model_name: "dsk-deepseek-v4-flash")).to be false
-        # The flash-vision-exp variant is vision-capable despite its
-        # text-only DeepSeek siblings.
-        expect(described_class.supports?("openclacky", :vision,
-                                         model_name: "dsk-deepseek-v4-flash-vision-exp")).to be true
+                                         model_name: "dsk-deepseek-flash")).to be true
       end
 
       it "returns true for deepseekv4 + flash-vision-exp override" do

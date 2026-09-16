@@ -47,8 +47,6 @@ module Clacky
           "abs-claude-haiku-4-5",
           "dsk-deepseek-flash",
           "dsk-deepseek-v4-pro",
-          "dsk-deepseek-v4-flash",
-          "dsk-deepseek-v4-flash-vision-exp",
           "or-gemini-3-1-pro",
           "or-gemini-3-8-flash",
           "or-gemini-3-7-flash",
@@ -143,15 +141,13 @@ module Clacky
         # Provider-level default: the Claude family served here is vision-capable.
         "capabilities" => { "vision" => true }.freeze,
         # Model-level overrides: DeepSeek models routed through this provider
-        # are text-only, except the flash-vision-exp variant which accepts
-        # image input; images uploaded for text-only models must be downgraded
-        # to disk refs. Gemini 3.1 Pro keeps the provider-default vision=true
+        # are text-only except V4.1 Flash, which is natively multimodal;
+        # images uploaded for text-only models must be downgraded to disk
+        # refs. Gemini 3.1 Pro keeps the provider-default vision=true
         # (it accepts image/audio/video input natively via OpenRouter).
         "model_capabilities" => {
-          "dsk-deepseek-flash"               => { "vision" => true }.freeze,
-          "dsk-deepseek-v4-pro"              => { "vision" => false }.freeze,
-          "dsk-deepseek-v4-flash"            => { "vision" => false }.freeze,
-          "dsk-deepseek-v4-flash-vision-exp" => { "vision" => true }.freeze
+          "dsk-deepseek-flash"  => { "vision" => true }.freeze,
+          "dsk-deepseek-v4-pro" => { "vision" => false }.freeze
         }.freeze,
         # Bedrock GPT models (abs-gpt-*) are served through the OpenAI
         # Responses API — their Chat Completions endpoint rejects function
@@ -162,7 +158,7 @@ module Clacky
         # Per-primary lite pairing: keys are "strong" primary models, values
         # are the lite sidekick to auto-inject when that primary is the
         # default. Lite is consumed by some subagents for cheap/fast work;
-        # weak models (haiku / v4-flash / 3-5-flash) ARE the lite tier
+        # weak models (haiku / flash / 3-5-flash) ARE the lite tier
         # themselves, so they're intentionally not listed here as keys —
         # no injection happens when the default model is already lite-class.
         "lite_models" => {
@@ -177,7 +173,7 @@ module Clacky
           "abs-claude-sonnet-4-5" => "abs-claude-haiku-4-5",
           "abs-gpt-5.6-sol"       => "abs-gpt-5.6-luna",
           "abs-gpt-5.6-terra"     => "abs-gpt-5.6-luna",
-          "dsk-deepseek-v4-pro"   => "dsk-deepseek-v4-flash",
+          "dsk-deepseek-v4-pro"   => "dsk-deepseek-flash",
           "or-gemini-3-1-pro"     => "or-gemini-3-6-flash"
         },
         # Fallback chain: if a model is unavailable, try the next one in order.
