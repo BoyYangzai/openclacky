@@ -691,6 +691,44 @@ RSpec.describe Clacky::Server::HttpServer do
         expect(m["api_format"]).to eq("openai-completions")
       end
     end
+
+    # The model picker labels every row with the provider it runs through, so
+    # the API has to resolve entries that carry no provider_id of their own.
+    it "resolves the provider name for each model" do
+      agent_config.models[0]["base_url"] = "https://api.openclacky.com"
+      with_server(agent_config: agent_config) do |server|
+        req = fake_req(method: "GET", path: "/api/config")
+        res = fake_res
+        dispatch(server, req, res)
+
+        m = parsed_body(res)["models"].first
+        expect(m["provider_name"]).to eq("OpenClacky")
+      end
+    end
+
+    it "passes through the preset i18n key when the provider has one" do
+      agent_config.models[0]["provider_id"] = "volcengine-ark"
+      with_server(agent_config: agent_config) do |server|
+        req = fake_req(method: "GET", path: "/api/config")
+        res = fake_res
+        dispatch(server, req, res)
+
+        m = parsed_body(res)["models"].first
+        expect(m["provider_name_key"]).to eq("provider.name.volcengine_ark")
+      end
+    end
+
+    it "leaves provider_name nil for endpoints no preset claims" do
+      with_server(agent_config: agent_config) do |server|
+        req = fake_req(method: "GET", path: "/api/config")
+        res = fake_res
+        dispatch(server, req, res)
+
+        m = parsed_body(res)["models"].first
+        expect(m["provider_name"]).to be_nil
+        expect(m["provider_name_key"]).to be_nil
+      end
+    end
   end
 
   # ── Single-item model CRUD APIs ───────────────────────────────────────────

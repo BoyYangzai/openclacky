@@ -6297,18 +6297,25 @@ module Clacky
       # GET /api/config — return current model configurations
       def api_get_config(req, res)
         models = @agent_config.models.map.with_index do |m, i|
+          # Provider is resolved (stored id → base_url → api_key hint) so the
+          # model picker can label every row with the service it actually runs
+          # through; provider_id alone is absent on most stored entries.
+          provider_id = @agent_config.provider_id_for(m)
+          provider    = provider_id && Clacky::Providers.get(provider_id)
           {
-            id:               m["id"],   # Stable runtime id — use this for switching
-            index:            i,
-            model:            m["model"],
-            base_url:         m["base_url"],
-            api_key_masked:   mask_api_key(m["api_key"]),
-            anthropic_format: m["anthropic_format"] || false,
-            api_format:       m["api_format"],
-            provider_id:      m["provider_id"],
-            capabilities:     m["capabilities"],
-            remark:           m["remark"],
-            type:             m["type"]
+            id:                m["id"],   # Stable runtime id — use this for switching
+            index:             i,
+            model:             m["model"],
+            base_url:          m["base_url"],
+            api_key_masked:    mask_api_key(m["api_key"]),
+            anthropic_format:  m["anthropic_format"] || false,
+            api_format:        m["api_format"],
+            provider_id:       m["provider_id"],
+            provider_name:     provider && provider["name"],
+            provider_name_key: provider && provider["name_key"],
+            capabilities:      m["capabilities"],
+            remark:            m["remark"],
+            type:              m["type"]
           }
         end
         # Filter out auto-injected models (lite, derived media) AND media
