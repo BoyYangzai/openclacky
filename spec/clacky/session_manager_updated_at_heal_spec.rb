@@ -46,7 +46,9 @@ RSpec.describe Clacky::SessionManager, "#load_session_file updated_at heal" do
       ]
     )
 
-    expect(loaded("aaaa0001")[:updated_at]).to eq(last_message.iso8601)
+    # The heal stamps the zone of whichever machine runs it, exactly like the
+    # save path's Time.now.iso8601, so compare the instant, not the offset text.
+    expect(Time.parse(loaded("aaaa0001")[:updated_at])).to eq(last_message)
   end
 
   it "sorts a healed session by its real last activity" do
@@ -88,7 +90,7 @@ RSpec.describe Clacky::SessionManager, "#load_session_file updated_at heal" do
                   updated_at: "2026-08-09T14:40:00+08:00",
                   messages: [{ role: "assistant", created_at: Time.parse("2026-08-09 14:40:02.500 +0800").to_f }])
 
-    expect(loaded("66660013")[:updated_at]).to eq("2026-08-09T14:40:02+08:00")
+    expect(Time.parse(loaded("66660013")[:updated_at])).to eq(Time.parse("2026-08-09 14:40:02 +0800"))
   end
 
   it "does not let cleanup_by_count evict a stale-stamped session that was active recently" do
