@@ -7771,7 +7771,9 @@ body {
   overflow-y: hidden;
   border: 1px solid transparent;
   border-radius: 5px;
-  background: var(--color-bg-primary);
+  /* Recessed field: a touch darker than the toolbar in every theme, so it
+     reads as sunken rather than as a second hover fill. */
+  background: color-mix(in srgb, var(--color-bg-secondary) 96%, #000);
   cursor: text;
   transition: border-color 0.12s, background 0.12s;
   scrollbar-width: none; /* Firefox */
