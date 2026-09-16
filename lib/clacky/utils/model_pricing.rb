@@ -183,8 +183,9 @@ module Clacky
       # V4.1 Flash and billed at the flash rates (see flash_peak/flash_off_peak).
       # Each entry carries peak/off_peak tiers; calculate_cost resolves the
       # active tier from the request time.
-      # V4.1 Flash — new canonical model id. Native multimodal; the retired
-      # v4-flash / v4-flash-vision-exp ids are routed here for compatibility.
+      # V4.1 Flash — canonical model id, natively multimodal. The retired
+      # v4-flash / v4-flash-vision-exp ids below are no longer offered, but
+      # keep their entries so already-billed history still resolves to a price.
       "deepseek-flash" => {
         deepseek: true,
         peak: {
@@ -199,6 +200,7 @@ module Clacky
         }
       },
 
+      # Retired alias — kept so already-billed history still resolves to a price.
       "deepseek-v4-flash" => {
         deepseek: true,
         peak: {
@@ -213,8 +215,8 @@ module Clacky
         }
       },
 
-      # Vision variant of v4-flash; identical token rates (images are billed
-      # as tokens per DeepSeek's image tokenization rules).
+      # Retired vision variant of v4-flash; identical token rates. Kept for
+      # history only.
       "deepseek-v4-flash-vision-exp" => {
         deepseek: true,
         peak: {
