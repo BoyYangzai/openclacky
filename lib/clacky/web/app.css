@@ -1331,7 +1331,7 @@ body {
 }
 
 /* ── DatePicker popup ─────────────────────────────────────────────────────── */
-.dp-popup {
+.dpk-popup {
   position: fixed;
   z-index: 9999;
   background: var(--color-bg-primary, #fff);
@@ -1344,17 +1344,17 @@ body {
   color: var(--color-text-primary);
   user-select: none;
 }
-.dp-header {
+.dpk-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.5rem;
 }
-.dp-title {
+.dpk-title {
   font-weight: 500;
   font-size: 0.8125rem;
 }
-.dp-nav {
+.dpk-nav {
   background: none;
   border: none;
   cursor: pointer;
@@ -1364,20 +1364,20 @@ body {
   border-radius: 4px;
   line-height: 1;
 }
-.dp-nav:hover { background: var(--color-bg-hover); }
-.dp-grid {
+.dpk-nav:hover { background: var(--color-bg-hover); }
+.dpk-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
 }
-.dp-dow {
+.dpk-dow {
   text-align: center;
   font-size: 0.625rem;
   color: var(--color-text-muted);
   padding: 0.1875rem 0;
   font-weight: 500;
 }
-.dp-day {
+.dpk-day {
   background: none;
   border: none;
   cursor: pointer;
@@ -1388,26 +1388,26 @@ body {
   font-size: 0.75rem;
   line-height: 1.4;
 }
-.dp-day:hover { background: var(--color-bg-hover); }
-.dp-day--today {
+.dpk-day:hover { background: var(--color-bg-hover); }
+.dpk-day--today {
   color: var(--color-accent-primary);
   font-weight: 700;
 }
-.dp-day--selected {
+.dpk-day--selected {
   background: var(--color-accent-primary);
   color: var(--color-text-inverse) !important;
   font-weight: 500;
 }
-.dp-day--selected:hover { background: var(--color-accent-primary); opacity: 0.88; }
-.dp-footer {
+.dpk-day--selected:hover { background: var(--color-accent-primary); opacity: 0.88; }
+.dpk-footer {
   display: flex;
   justify-content: space-between;
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--color-border-primary);
 }
-.dp-btn-clear,
-.dp-btn-today {
+.dpk-btn-clear,
+.dpk-btn-today {
   background: none;
   border: none;
   cursor: pointer;
@@ -1416,8 +1416,8 @@ body {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
-.dp-btn-clear:hover,
-.dp-btn-today:hover { background: var(--color-bg-hover); }
+.dpk-btn-clear:hover,
+.dpk-btn-today:hover { background: var(--color-bg-hover); }
 
 /* 清除筛选 — small ✕ icon button */
 .btn-search-clear-all {
