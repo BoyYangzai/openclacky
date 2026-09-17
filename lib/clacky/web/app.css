@@ -6404,6 +6404,18 @@ body {
   flex-shrink: 0;
 }
 
+/* A quote badge carries an excerpt, not a filename — excerpts run to paragraphs,
+   so they stay on one line, same as the composer chip they were staged in. */
+.msg-quote-badge {
+  max-width: 100%;
+}
+.msg-quote-badge .msg-mention-badge-name {
+  max-width: 46ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #user-input {
   flex: 1;
   background: transparent !important;
@@ -16548,6 +16560,21 @@ body.setup-mode[data-theme="dark"] {
 }
 .quote-select-btn:active {
   background: #000;
+}
+
+/* ═══ Staged quote chip (quote-select.js) ═══
+   The chip borrows the mention-chip look and mechanics (see the "Mention chips
+   inside the contenteditable composer" block): atomic in the composer, skipped
+   by Composer.text(). It only adds the single-line truncation — a quote can be
+   paragraphs long, the chip must stay one line. */
+.quote-chip {
+  max-width: 100%;
+}
+.quote-chip .mention-chip-label {
+  max-width: 46ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Running-task input behavior menu. */

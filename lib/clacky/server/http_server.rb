@@ -7794,6 +7794,7 @@ module Clacky
           next unless ref.is_a?(Hash)
           case ref["type"].to_s
           when "session" then build_session_reference_context(ref)
+          when "quote"   then build_quote_reference_context(ref)
           end
         end
       end
@@ -7812,6 +7813,19 @@ module Clacky
         lines << "Session file: #{files[:json_path]}" if files && files[:json_path]
 
         lines.join("\n")
+      end
+
+      # A quote reference is a passage the user selected out of an earlier
+      # message. The excerpt is the whole point of the reference, so inline it
+      # verbatim — no file pointer, nothing for the model to go fetch.
+      private def build_quote_reference_context(ref)
+        text = ref["text"].to_s.strip
+        return nil if text.empty?
+
+        label = ref["label"].to_s.strip
+        header = label.empty? ? "[Quoted excerpt from this conversation]" :
+                                "[Quoted excerpt from this conversation: #{label}]"
+        [header, text].join("\n")
       end
 
       def deliver_confirmation(session_id, conf_id, result)

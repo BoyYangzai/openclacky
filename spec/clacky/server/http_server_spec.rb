@@ -2107,6 +2107,31 @@ RSpec.describe Clacky::Server::HttpServer do
       end
     end
 
+    it "inlines a quoted excerpt so the model sees the passage verbatim" do
+      with_server(agent_config: agent_config) do |server|
+        refs = [{ "type" => "quote", "label" => "Assistant · #2", "text" => "The quick brown fox." }]
+        captured = send_reference_message(server, "sid-ref-5", "what does this mean", refs)
+
+        expect(captured[:kwargs][:reference_contexts]).to eq([
+          "[Quoted excerpt from this conversation: Assistant · #2]\nThe quick brown fox."
+        ])
+        expect(captured[:kwargs][:references_display]).to eq(refs)
+      end
+    end
+
+    it "drops a quote's blank label and skips empty excerpts" do
+      with_server(agent_config: agent_config) do |server|
+        captured = send_reference_message(server, "sid-ref-6", "hi", [
+          { "type" => "quote", "text" => "  just the text  " },
+          { "type" => "quote", "label" => "Empty", "text" => "   " }
+        ])
+
+        expect(captured[:kwargs][:reference_contexts]).to eq([
+          "[Quoted excerpt from this conversation]\njust the text"
+        ])
+      end
+    end
+
     it "ignores unknown types and non-hash entries" do
       with_server(agent_config: agent_config) do |server|
         sm = server.instance_variable_get(:@session_manager)
