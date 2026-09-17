@@ -13296,10 +13296,14 @@ body.setup-mode[data-theme="dark"] {
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
-[data-theme="dark"] .segmented-control {
+[data-theme="dark"] .segmented-control,
+[data-theme="dim"] .segmented-control,
+[data-theme="bluedark"] .segmented-control {
   background: var(--color-bg-primary);
 }
-[data-theme="dark"] .segmented-control__btn.active {
+[data-theme="dark"] .segmented-control__btn.active,
+[data-theme="dim"] .segmented-control__btn.active,
+[data-theme="bluedark"] .segmented-control__btn.active {
   background: var(--color-bg-hover);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
