@@ -16523,7 +16523,7 @@ body.setup-mode[data-theme="dark"] {
 /* Running-task input behavior menu. */
 #input-behavior-control { position: relative; flex-shrink: 0; align-self: center; }
 #input-behavior-control[hidden], #input-behavior-menu[hidden] { display: none; }
-#input-behavior-toggle { display: grid; place-items: center; width: 26px; height: 34px; padding: 0; border: none; border-radius: 7px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+#input-behavior-toggle { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: none; border-radius: 9px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
 #input-behavior-toggle:hover, #input-behavior-toggle[aria-expanded="true"] { background: var(--color-bg-hover); color: var(--color-text-primary); }
 #input-behavior-menu { position: absolute; bottom: calc(100% + 12px); right: 0; width: min(280px, calc(100vw - 48px)); padding: 6px; border: 1px solid var(--color-border-primary); border-radius: 12px; background: var(--color-bg-primary); box-shadow: 0 8px 30px rgba(0,0,0,.14); z-index: 1000; }
 .input-behavior-heading { padding: 6px 10px 8px; font-size: 11px; color: var(--color-text-tertiary); }
@@ -16534,7 +16534,7 @@ body.setup-mode[data-theme="dark"] {
 #input-behavior-menu small { display: block; margin-top: 2px; font-size: 11px; line-height: 1.5; color: var(--color-text-secondary); }
 .input-behavior-check { width: 15px; flex-shrink: 0; line-height: 20px; color: var(--color-accent-primary); visibility: hidden; }
 #input-behavior-menu [aria-checked="true"] .input-behavior-check { visibility: visible; }
-@media (max-width: 768px) { #input-behavior-toggle { width: 28px; height: 38px; } #input-behavior-menu button { min-height: 56px; } }
+@media (max-width: 768px) { #input-behavior-menu button { min-height: 56px; } }
 
 /* Pending guidance: single-line previews and always-visible actions. */
 #input-queue[hidden] { display: none; }
