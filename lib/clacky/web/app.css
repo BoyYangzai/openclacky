@@ -7649,6 +7649,15 @@ body {
 .dp-sidebar-item:hover {
   background: var(--color-bg-hover);
 }
+.dp-sidebar-item.active,
+.dp-sidebar-item.active:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+.dp-sidebar-item.active .dp-sidebar-icon {
+  color: var(--color-text-primary);
+}
 .dp-sidebar-icon {
   display: inline-flex;
   align-items: center;
@@ -7672,6 +7681,13 @@ body {
 .dp-sidebar-favorite:focus-within {
   background: var(--color-bg-hover);
 }
+/* The selected favorite paints the whole row so the highlight stays one block */
+.dp-sidebar-favorite:has(.dp-sidebar-item.active) {
+  background: var(--color-bg-hover);
+}
+.dp-sidebar-favorite:has(.dp-sidebar-item.active) .dp-sidebar-item.active {
+  background: transparent;
+}
 .dp-sidebar-favorite-open {
   min-width: 0;
   padding-right: 0.25rem;
@@ -7689,7 +7705,7 @@ body {
   padding: 0;
   flex-shrink: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: var(--color-text-tertiary);
   cursor: pointer;
@@ -7703,8 +7719,17 @@ body {
   pointer-events: auto;
 }
 .dp-sidebar-favorite-remove:hover {
-  background: var(--color-bg-active);
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
   color: var(--color-text-primary);
+}
+.dp-sidebar-favorite-remove:active {
+  background: color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+}
+.dp-sidebar-favorite-remove:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 1px;
 }
 
 /* Main column — toolbar + list + footer */
@@ -15344,6 +15369,11 @@ body.setup-mode[data-theme="dark"] {
     width: auto;
     padding: 0.4rem 0.25rem 0.4rem 0.625rem;
     border: 0;
+  }
+  .dp-sidebar > .dp-sidebar-item.active,
+  .dp-sidebar-favorite:has(.dp-sidebar-item.active) {
+    border-color: color-mix(in srgb, var(--color-text-primary) 22%, var(--color-border-primary));
+    background: var(--color-bg-hover);
   }
   .dp-sidebar-favorite-remove {
     width: 28px;
