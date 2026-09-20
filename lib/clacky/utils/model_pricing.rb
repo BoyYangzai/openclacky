@@ -408,6 +408,11 @@ module Clacky
         output: { default: 0.80, over_200k: 1.60 },
         cache:  { write: 0.14, read: 0.03 }
       },
+      "doubao-seed-2.0-mini" => {
+        input:  { default: 0.06, over_200k: 0.12 },
+        output: { default: 0.60, over_200k: 1.19 },
+        cache:  { write: 0.06, read: 0.02 }
+      },
 
       # Google Gemini 3 series (via Vertex AI). Tiered at 200K input tokens
       # for Pro; Flash has flat pricing.
@@ -707,6 +712,12 @@ module Clacky
         input:  { default: 0.15, over_200k: 0.15 },
         output: { default: 0.50, over_200k: 0.50 },
         cache:  { write: 0.15, read: 0.03 }
+      },
+
+      "glm-5.3-flashx" => {
+        input:  { default: 0.37, over_200k: 0.37 },
+        output: { default: 1.25, over_200k: 1.25 },
+        cache:  { write: 0.37, read: 0.075 }
       },
 
       "glm-5.3" => {
@@ -1081,12 +1092,15 @@ module Clacky
         # (mainland bigmodel.cn vs intl z.ai) the user configured.
         # Strict anchored match so unrelated strings like "glm-5-x-foo"
         # don't silently borrow a nearby model's rate.
+        when /^glm-5\.3-flashx$/i
+          "glm-5.3-flashx"
         when /^glm-5\.3-flash$/i
           "glm-5.3-flash"
         when /^glm-5\.3$/i
           "glm-5.3"
         when /^glm-5\.2$/i
-          "glm-5.2"        when /^glm-5\.1$/i
+          "glm-5.2"
+        when /^glm-5\.1$/i
           "glm-5.1"
         when /^glm-5v-turbo$/i
           "glm-5v-turbo"
