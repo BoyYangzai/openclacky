@@ -256,10 +256,13 @@ module ComputerUse
 
     private def cmd_doctor(_positional, _options)
       @stdout.puts "platform: #{RUBY_PLATFORM}"
-      @stdout.puts "backend: #{backend.class.name.split('::').last}"
       @stdout.puts "kill switch: #{File.exist?(CONFIG_PATH) ? CONFIG_PATH : 'absent'}"
       @stdout.puts "enabled: #{disabled_by_config? ? 'no' : 'yes'}"
 
+      # Resolving the backend is the step that fails on a host with no desktop —
+      # it raises UsageError, which the CLI reports as a normal usage failure.
+      # Keeping it last means the report still says which host it looked at.
+      @stdout.puts "backend: #{backend.class.name.split('::').last}"
       lines, problems = backend.diagnostics
       lines.each { |line| @stdout.puts line }
       return EXIT_OK if problems.empty?
