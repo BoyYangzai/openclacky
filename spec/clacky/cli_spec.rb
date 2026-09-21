@@ -5,6 +5,21 @@ require "fileutils"
 require "pathname"
 
 RSpec.describe Clacky::CLI do
+  describe "server strict port option" do
+    it "passes the parsed flag to the master and preserves it for worker restarts" do
+      require "clacky/server/server_master"
+      allow($stderr).to receive(:isatty).and_return(true)
+      allow(Clacky::Telemetry).to receive(:startup!)
+      master = double("master", run: nil)
+      expect(Clacky::Server::Master).to receive(:new).with(
+        host: "127.0.0.1", port: 7070, strict_port: true, extra_flags: ["--strict-port"],
+      ).and_return(master)
+      ClimateControl.modify("CLACKY_WORKER" => nil) do
+        described_class.start(["server", "--port", "7070", "--strict-port"])
+      end
+    end
+  end
+
   describe "rich UI compatibility" do
     it "exits before loading rich UI on Ruby versions older than 2.6" do
       cli = described_class.new

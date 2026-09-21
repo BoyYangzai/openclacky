@@ -317,12 +317,15 @@ module Clacky
         #
         # When running as a worker under Master, DoNotListen: true prevents WEBrick
         # from calling bind() on its own — we inject the inherited socket instead.
+        server = nil
         webrick_opts = {
           BindAddress:   @host,
           Port:          @port,
           Logger:        WEBrick::Log.new(File::NULL),
           AccessLog:     [],
-          StartCallback: proc { }  # signal traps set below, after `server` is created
+          # WEBrick resets its status in start(). A TERM during initialization
+          # must not resurrect a server whose listeners were already detached.
+          StartCallback: proc { server.shutdown if @draining }
         }
         webrick_opts[:DoNotListen] = true if @inherited_socket
         Clacky::Logger.info("[HttpServer PID=#{Process.pid}] WEBrick DoNotListen=#{webrick_opts[:DoNotListen].inspect}")
@@ -330,7 +333,7 @@ module Clacky
         server = WEBrick::HTTPServer.new(**webrick_opts)
 
         # Override WEBrick's signal traps now that `server` is available.
-        # On INT/TERM: call server.shutdown (graceful), with a 1s hard-kill fallback.
+        # On INT/TERM: call server.shutdown; the master bounds process exit.
         # Also stop BrowserManager so the chrome-devtools-mcp node process is killed
         # before this worker exits — otherwise it becomes an orphan and holds port 7070.
         shutdown_once = false
@@ -528,6 +531,8 @@ module Clacky
         # pass covers the whole-program checks an author needs to see at boot.
         report_extension_issues
 
+        return if @draining
+
         # Start the background scheduler
         @scheduler.start
         puts "   Scheduler: #{@scheduler.schedules.size} task(s) loaded"
@@ -549,7 +554,10 @@ module Clacky
         # Start browser MCP daemon if browser.yml is configured (non-blocking)
         @browser_manager.start
 
-        server.start
+        server.start unless @draining
+      ensure
+        # close only this process's FD, never shutdown the shared kernel socket.
+        @inherited_socket.close if @inherited_socket && !@inherited_socket.closed?
       end
 
 

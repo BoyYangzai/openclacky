@@ -1407,9 +1407,12 @@ module Clacky
       Examples:
         $ clacky server
         $ clacky server --port 8080
+        $ clacky server --port 7070 --strict-port
     LONGDESC
     option :host, type: :string, aliases: ["-b", "--bind"], default: "127.0.0.1", desc: "Bind host (default: 127.0.0.1)"
     option :port, type: :numeric, aliases: "-p", default: 7070, desc: "Listen port (default: 7070)"
+    option :strict_port, type: :boolean, default: false,
+           desc: "Fail if the requested port is occupied instead of trying fallback ports"
     option :brand_test, type: :boolean, default: false,
            desc: "Enable brand test mode: mock license activation without calling remote API"
     option :no_compression, type: :boolean, default: false,
@@ -1538,6 +1541,7 @@ module Clacky
         end
 
         extra_flags = []
+        extra_flags << "--strict-port" if options[:strict_port]
         extra_flags << "--brand-test" if options[:brand_test]
         extra_flags << "--no-compression" if options[:no_compression]
         extra_flags << "--no-memory" if options[:no_memory]
@@ -1562,6 +1566,7 @@ module Clacky
         Clacky::Server::Master.new(
           host:        options[:host],
           port:        options[:port],
+          strict_port: options[:strict_port],
           extra_flags: extra_flags
         ).run
       end
