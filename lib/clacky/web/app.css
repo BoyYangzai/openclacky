@@ -9636,7 +9636,8 @@ button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-o
   align-items: center;
   gap: 0.375rem;
 }
-.ext-row-add {
+.ext-row-add,
+.ext-row-more {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9646,11 +9647,18 @@ button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-o
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   cursor: pointer;
   transition: background .15s, color .15s;
 }
-.ext-row-add:hover { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
+/* One shade above the row's own hover fill: reusing --color-bg-hover here would
+   match a hovered row exactly and the button would disappear into it. */
+.ext-row-add:hover,
+.ext-row-more:hover,
+.ext-row-more[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--color-bg-hover) 92%, var(--color-text-primary));
+  color: var(--color-text-secondary);
+}
 .ext-row-busy {
   display: flex;
   align-items: center;
@@ -9788,25 +9796,6 @@ button:focus-visible { outline: 2px solid var(--color-accent-primary); outline-o
 }
 .extension-homepage:hover { text-decoration: underline; }
 
-.ext-row-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background .15s, color .15s;
-}
-.ext-row-more:hover,
-.ext-row-more[aria-expanded="true"] {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-}
 /* One floating menu serves every row, so it lives outside the list in the DOM
    and is positioned against the button that opened it. */
 .ext-row-menu {
