@@ -1057,8 +1057,7 @@ module Clacky
         end
 
         broadcast_session_update(session_id, created: true)
-        summary = @registry.session_summary(session_id)
-        json_response(res, 201, { session: summary })
+        json_response(res, 201, { session: @registry.session_summary(session_id) })
       end
 
       # Auto-restore persisted sessions (or create a fresh default) when the server starts.
@@ -2720,6 +2719,9 @@ module Clacky
             slug      = ext["name"] || ext[:name] || ext["slug"] || ext[:slug]
             container = installed[slug]
             ext.merge(
+              # `id` on a catalog entry is the store's own row id; local
+              # operations (uninstall) need the installed directory name.
+              "slug"              => slug,
               "installed"         => !container.nil?,
               "installed_version" => container&.dig(:version)
             )
@@ -2764,6 +2766,9 @@ module Clacky
               local_overrides["emoji"] = local_emoji if local_emoji.to_s.strip != ""
             end
             ext.merge(
+              # Same as the public catalog: `id` is the store's row id, while
+              # uninstall/enable need the slug the extension was installed as.
+              "slug"              => slug,
               "installed"         => !ext["installed_version"].nil?,
               "installed_version" => ext["installed_version"],
               **local_overrides
@@ -2784,7 +2789,6 @@ module Clacky
       # Returns only the builtin (system) extensions shipped with the gem.
       def api_store_extensions_system(res)
         result   = Clacky::ExtensionLoader.load_all
-        disabled = Clacky::ExtensionLoader.disabled_ids
 
         hidden = %w[coding general ext-studio].to_set
 
@@ -2811,7 +2815,7 @@ module Clacky
             "layer"           => "builtin",
             "installed"       => true,
             "removable"       => false,
-            "disabled"        => disabled.include?(ext_id),
+            "disabled"        => container[:disabled] == true,
           }
         end
 
@@ -2822,55 +2826,61 @@ module Clacky
 
       # GET /api/store/extensions/installed
       #
-      # Returns all locally installed extensions (all layers: builtin, installed,
-      # local) regardless of whether they are still listed on the marketplace.
+      # Every extension that lives on this machine, regardless of whether it is
+      # still listed on the marketplace, ordered builtin → installed: builtin is
+      # official (ships with the gem, can only be switched off), installed came
+      # from the marketplace via the user and can be removed. Extensions that own
+      # a dedicated surface (coding, general, ext-studio) are hidden here too —
+      # they are not user-managed extensions.
       def api_store_extensions_installed(res)
-        result   = Clacky::ExtensionLoader.load_all
-        disabled = Clacky::ExtensionLoader.disabled_ids
+        hidden  = %w[coding general ext-studio].to_set
+        result  = Clacky::ExtensionLoader.load_all
+        layers  = Clacky::ExtensionLoader::LAYERS
 
-        local_entries = Array(result&.containers).filter_map do |ext_id, container|
-          next unless container[:layer] == :installed
+        entries = Array(result&.containers).select do |ext_id, container|
+          next false unless %i[builtin installed].include?(container[:layer])
+          next false if container[:layer] == :builtin && hidden.include?(ext_id)
 
-          [ext_id, container]
-        end.to_h
+          true
+        end.sort_by { |ext_id, container| [layers.index(container[:layer]) || 99, ext_id] }
 
-        market_by_slug = fetch_batch_market_data(local_entries.keys)
+        market_by_slug = fetch_batch_market_data(entries.map { |ext_id, _c| ext_id })
 
-        extensions = local_entries.map do |ext_id, container|
-          market = market_by_slug[ext_id]
-          # For self-authored (origin: self) extensions market is nil.
-          # Fall back to local ext.yml data so name/description/author are populated.
-          local_name   = container[:name].to_s.then { |n| n.empty? ? ext_id : n }
-          local_desc   = container.dig(:raw, "description").to_s
-          local_author = container[:author].to_s
-          local_units  = units_from_container(container)
+        extensions = entries.map do |ext_id, container|
+          builtin = container[:layer] == :builtin
+          market  = market_by_slug[ext_id]
+          # A builtin extension's manifest is the source of truth for its text: it
+          # ships with the gem, and plenty of builtins were never published, so a
+          # marketplace miss must not paint them as delisted.
+          label = builtin ? nil : market
+          local_name = container[:name].to_s.then { |n| n.empty? ? ext_id : n }
           {
             "id"                => ext_id,
-            "name"              => market ? (market["name"] || ext_id) : local_name,
-            "display_name"      => market&.dig("display_name"),
-            "display_name_zh"   => market&.dig("display_name_zh"),
-            "name_zh"           => market&.dig("name_zh"),
-            "name_en"           => market&.dig("name_en"),
+            "name"              => label ? (label["name"] || ext_id) : local_name,
+            "display_name"      => (label && label["display_name"]) || container.dig(:raw, "display_name") || local_name,
+            "display_name_zh"   => (label && label["display_name_zh"]) || container.dig(:raw, "display_name_zh"),
+            "name_zh"           => label&.dig("name_zh"),
+            "name_en"           => label&.dig("name_en"),
             "slug"              => ext_id,
-            "version"           => market ? (market["version"] || container[:version]) : container[:version],
+            "version"           => (label && label["version"]) || container[:version],
             "installed_version" => container[:version],
-            "description"       => market ? market["description"] : local_desc,
-            "author"            => market ? market["author"] : local_author,
+            "description"       => (label && label["description"]) || container.dig(:raw, "description").to_s,
+            "description_zh"    => (label && label["description_zh"]) || container.dig(:raw, "description_zh").to_s,
+            "author"            => (label && label["author"]) || container[:author].to_s,
             "icon_url"          => market&.dig("icon_url"),
-            "units"             => market ? market["units"] : local_units,
-            "homepage"          => market ? (market["homepage"] || "") : container[:homepage].to_s,
-            "origin"            => market ? (market["origin"] || container[:origin]) : container[:origin],
+            "units"             => (label && label["units"]) || units_from_container(container),
+            "homepage"          => (label && label["homepage"]) || container[:homepage].to_s,
+            "origin"            => (label && (label["origin"] || container[:origin])) || container[:origin],
             "hub_active"        => market&.dig("hub_active"),
             "download_count"    => market&.dig("download_count").to_i,
-            # Mark as unlisted when:
-            # - market is nil (extension no longer exists on the platform), OR
-            # - platform batch API explicitly returned unlisted:true (brand-private
-            #   extension removed from all distributions but not yet soft-deleted).
-            "unlisted"          => market.nil? || market["unlisted"] == true,
+            # Unlisted means the marketplace lost track of it: either the batch
+            # lookup came back empty, or the platform flagged it unlisted:true
+            # (brand-private extension pulled from distribution, not yet deleted).
+            "unlisted"          => !builtin && (market.nil? || market["unlisted"] == true),
             "layer"             => container[:layer].to_s,
             "installed"         => true,
-            "removable"         => true,
-            "disabled"          => disabled.include?(ext_id),
+            "removable"         => container[:layer] == :installed,
+            "disabled"          => container[:disabled] == true,
           }
         end
 

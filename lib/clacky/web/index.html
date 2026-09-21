@@ -748,9 +748,8 @@
 
         <div class="extensions-toolbar">
           <div class="extensions-filter-tabs">
-            <button type="button" class="extensions-filter-tab extensions-filter-tab-active" data-filter="market" id="tab-extensions-market" data-i18n="extensions.filter.market">Marketplace</button>
-            <button type="button" class="extensions-filter-tab" data-filter="brand" id="tab-extensions-brand" data-i18n="extensions.filter.brand" style="display:none">Brand</button>
-            <button type="button" class="extensions-filter-tab" data-filter="system" data-i18n="extensions.filter.system">System</button>
+            <button type="button" class="extensions-filter-tab extensions-filter-tab-active" data-filter="all" id="tab-extensions-all" data-i18n="extensions.filter.all">All</button>
+            <button type="button" class="extensions-filter-tab" data-filter="brand" id="tab-extensions-brand" data-i18n="extensions.filter.all" style="display:none">All</button>
             <button type="button" class="extensions-filter-tab" data-filter="installed" data-i18n="extensions.filter.installed">Installed</button>
           </div>
           <div class="extensions-toolbar-right">
@@ -766,18 +765,6 @@
                 <div class="custom-select-option" data-value="downloads" data-i18n="extensions.sort.downloads">Most downloaded</div>
                 <div class="custom-select-option" data-value="newest" data-i18n="extensions.sort.newest">Newest</div>
                 <div class="custom-select-option" data-value="updated" data-i18n="extensions.sort.updated">Recently updated</div>
-              </div>
-            </div>
-            <div class="custom-select-wrapper extensions-select" id="extensions-installed-filter">
-              <div class="custom-select-trigger" tabindex="0">
-                <span class="custom-select-value" data-i18n="extensions.filter.all">All</span>
-                <svg class="custom-select-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </div>
-              <div class="custom-select-dropdown">
-                <div class="custom-select-option" data-value="all" data-i18n="extensions.filter.all">All</div>
-                <div class="custom-select-option" data-value="installed" data-i18n="extensions.filter.installed">Installed</div>
               </div>
             </div>
           </div>

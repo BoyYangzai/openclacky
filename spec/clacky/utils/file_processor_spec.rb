@@ -441,6 +441,45 @@ RSpec.describe Clacky::Utils::FileProcessor do
           .to raise_error(ArgumentError, /File too large/)
       end
     end
+
+    it "downscales images to IMAGE_MAX_WIDTH by default" do
+      Dir.mktmpdir do |dir|
+        f = File.join(dir, "wide.png")
+        require "chunky_png"
+        require "base64"
+        ChunkyPNG::Image.new(1200, 100).save(f)
+
+        result = described_class.file_to_base64(f)
+        image = ChunkyPNG::Image.from_blob(Base64.strict_decode64(result[:base64_data]))
+        expect(image.width).to eq(described_class::IMAGE_MAX_WIDTH)
+      end
+    end
+
+    it "honours a custom max_width" do
+      Dir.mktmpdir do |dir|
+        f = File.join(dir, "wide.png")
+        require "chunky_png"
+        require "base64"
+        ChunkyPNG::Image.new(1200, 100).save(f)
+
+        result = described_class.file_to_base64(f, max_width: 1000)
+        image = ChunkyPNG::Image.from_blob(Base64.strict_decode64(result[:base64_data]))
+        expect(image.width).to eq(1000)
+      end
+    end
+
+    it "sends full resolution when max_width is 0" do
+      Dir.mktmpdir do |dir|
+        f = File.join(dir, "wide.png")
+        require "chunky_png"
+        require "base64"
+        ChunkyPNG::Image.new(1200, 100).save(f)
+
+        result = described_class.file_to_base64(f, max_width: 0)
+        image = ChunkyPNG::Image.from_blob(Base64.strict_decode64(result[:base64_data]))
+        expect(image.width).to eq(1200)
+      end
+    end
   end
 
   describe ".rewrite_local_image_urls" do
