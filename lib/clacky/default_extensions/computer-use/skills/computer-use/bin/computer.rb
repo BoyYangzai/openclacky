@@ -82,6 +82,15 @@ module ComputerUse
     rescue Clacky::Computer::PermissionError => e
       @stderr.puts "permission: #{e.message}"
       EXIT_PERMISSION
+    rescue Clacky::Computer::BackendError => e
+      # Same code as a missing permission: both mean "the environment is not
+      # ready", which is what the caller has to act on.
+      @stderr.puts "error: #{e.message}"
+      EXIT_PERMISSION
+    rescue ArgumentError => e
+      # A backend raises this for a key or combo it cannot map to a keycode.
+      @stderr.puts "error: #{e.message}"
+      EXIT_USAGE
     end
 
     private def cmd_screenshot(_positional, options)
@@ -207,10 +216,17 @@ module ComputerUse
       @stdout.puts "held #{combo} for #{duration}s"
     end
 
-    # macOS exposes no way to read the pointer, and every run is a fresh
-    # process, so there is nothing to report — say so instead of guessing.
+    # macOS exposes no way to read the pointer, and every run is a fresh process,
+    # so there is nothing to report — say so instead of guessing. Windows does
+    # expose it, so report the real thing there.
     private def cmd_cursor(_positional, _options)
-      @stdout.puts "cursor position is unknown; take a screenshot and locate the pointer in the image"
+      position = backend.cursor
+      if position.nil?
+        @stdout.puts "cursor position is unknown; take a screenshot and locate the pointer in the image"
+        return EXIT_OK
+      end
+
+      @stdout.puts "cursor at #{position[0].round},#{position[1].round} points"
       EXIT_OK
     end
 
@@ -232,32 +248,23 @@ module ComputerUse
       if front.to_s.casecmp?(app)
         @stdout.puts "activated #{app} (frontmost: #{front})"
       else
-        @stdout.puts "asked LaunchServices for #{app}; frontmost is now #{front || 'unknown'}"
+        @stdout.puts "asked the desktop to focus #{app}; frontmost is now #{front || 'unknown'}"
         @stdout.puts "take a screenshot to confirm the window you need is visible"
       end
       EXIT_OK
     end
 
     private def cmd_doctor(_positional, _options)
-      macos = RUBY_PLATFORM.include?("darwin")
-      @stdout.puts "platform: #{RUBY_PLATFORM}#{macos ? '' : ' (unsupported — macOS only)'}"
+      @stdout.puts "platform: #{RUBY_PLATFORM}"
+      @stdout.puts "backend: #{backend.class.name.split('::').last}"
       @stdout.puts "kill switch: #{File.exist?(CONFIG_PATH) ? CONFIG_PATH : 'absent'}"
       @stdout.puts "enabled: #{disabled_by_config? ? 'no' : 'yes'}"
-      return EXIT_USAGE unless macos
 
-      screen = backend.screen_recording_allowed?
-      accessibility = backend.accessibility_allowed?
-      @stdout.puts "screen recording: #{screen ? 'granted' : 'MISSING'}"
-      @stdout.puts "accessibility: #{accessibility ? 'granted' : 'MISSING'}"
-      backend.displays.each do |display|
-        @stdout.puts "display #{display.id}#{display.main ? ' (main)' : ''}: " \
-                     "#{display.width}x#{display.height} points, origin #{display.origin_x},#{display.origin_y}"
-      end
+      lines, problems = backend.diagnostics
+      lines.each { |line| @stdout.puts line }
+      return EXIT_OK if problems.empty?
 
-      missing = backend.missing_permissions
-      return EXIT_OK if missing.empty?
-
-      @stderr.puts "missing: #{missing.join(', ')} — #{Clacky::Computer::MacOS::PERMISSION_HINT}"
+      problems.each { |problem| @stderr.puts "problem: #{problem}" }
       EXIT_PERMISSION
     end
 
@@ -434,14 +441,18 @@ module ComputerUse
     # ---- environment ----
 
     private def backend
-      @backend ||= begin
-        unless RUBY_PLATFORM.include?("darwin")
-          raise UsageError, "computer-use supports macOS only for now (running on #{RUBY_PLATFORM})"
-        end
+      @backend ||= if RUBY_PLATFORM.include?("darwin")
+                     require File.join(EXTENSION_ROOT, "lib", "computer", "macos")
+                     Clacky::Computer::MacOS.new
+                   else
+                     require File.join(EXTENSION_ROOT, "lib", "computer", "windows")
+                     unless Clacky::Computer::Windows.wsl?
+                       raise UsageError, "computer-use drives the macOS desktop, or the Windows desktop " \
+                                         "through WSL (running on #{RUBY_PLATFORM})"
+                     end
 
-        require File.join(EXTENSION_ROOT, "lib", "computer", "macos")
-        Clacky::Computer::MacOS.new
-      end
+                     Clacky::Computer::Windows.new
+                   end
     end
 
     private def display_for(id)
@@ -495,7 +506,7 @@ module ComputerUse
 
     private def usage
       <<~USAGE
-        computer.rb — drive the macOS desktop
+        computer.rb — drive the desktop (macOS, or Windows through WSL)
 
         Usage: ruby computer.rb <command> [args] [--options]
 
@@ -523,8 +534,8 @@ module ComputerUse
         screenshot — read it with image_max_width: 0 (the read tool re-scales
         images to 800px otherwise). Costs many more tokens per image.
 
-        Exit codes: 0 ok, 1 bad usage, 2 macOS permission missing, 3 screenshot
-        state missing or stale, 4 disabled by #{CONFIG_PATH}.
+        Exit codes: 0 ok, 1 bad usage, 2 permission missing or backend unusable,
+        3 screenshot state missing or stale, 4 disabled by #{CONFIG_PATH}.
       USAGE
     end
   end

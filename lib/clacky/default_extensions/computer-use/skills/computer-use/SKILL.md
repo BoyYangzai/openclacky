@@ -1,12 +1,28 @@
 ---
 name: computer-use
-description: Drive the macOS desktop when a task needs a native app, dialog, menu bar, file picker or anything the terminal and browser tools cannot reach. Screenshot first, then click and type by coordinates read from that image.
+description: Drive the desktop — macOS, or the Windows desktop through WSL — when a task needs a native app, dialog, menu bar, file picker or anything the terminal and browser tools cannot reach. Screenshot first, then click and type by coordinates read from that image.
 ---
 
-# Computer Use (macOS)
+# Computer Use (macOS and Windows)
 
 GUI control goes through the script bundled with this skill. The `computer-use` extension is
 off by default, so if you are reading this the user has switched it on.
+
+## Platform support
+
+| Host | Backend | Needs |
+|---|---|---|
+| macOS | CoreGraphics + Quartz events | Screen Recording and Accessibility grants |
+| Windows | PowerShell agent launched from inside WSL | WSL running in an interactive desktop session |
+
+On Windows the script only works from a WSL shell on the same machine: it reaches the
+Windows desktop through WSL interop, which inherits the logged-on user's session. Run
+from a service, an SSH session or anything on session 0 and `doctor` will say so —
+screenshots come back black and input goes nowhere. This does not work on plain Linux
+without Windows, and there is no macOS-side fallback for it.
+
+Everything below is the same on both platforms. Key combos keep the macOS spelling
+(`cmd`, `shift`), so `cmd` means the Windows key on Windows.
 
 ## When to use it
 
@@ -24,7 +40,7 @@ off by default, so if you are reading this the user has switched it on.
    ruby <skill_dir>/bin/computer.rb activate "WorkBuddy"
    ```
 
-   It needs no extra macOS permission. If the name does not match (localized
+   It needs no extra permission on either platform. If the name does not match (localized
    app names differ), it prints what is actually frontmost — take a screenshot
    to see the real window order instead of guessing.
 
@@ -40,14 +56,19 @@ off by default, so if you are reading this the user has switched it on.
    PIL overlay scripts. `--grid 100` sets a denser step; the default is 200.
 
 3. Read that PNG with the `read` tool — it is attached to the conversation as an
-   image. Need to read small text? Crop and upscale a region first:
+   image. Need to read small text, or click inside a region? Crop and upscale it
+   first, with `--grid`:
 
    ```bash
-   ruby <skill_dir>/bin/computer.rb zoom 400,300,900,600 --out /tmp/clacky-shot-2.png
+   ruby <skill_dir>/bin/computer.rb zoom 400,300,900,600 --grid --out /tmp/clacky-shot-2.png
    ```
 
-   `zoom` also takes `--grid`, and its labels are in the zoomed image's own
-   pixel space, ready to feed straight into `click`.
+   Always pass `--grid`: its labels are in the zoomed image's own pixel space,
+   ready to feed straight into `click`, so you never convert coordinates
+   yourself. Hand-converting a downscaled image is the usual source of
+   misclicks — do not do it. `zoom` also pads the region it captures, so the
+   `origin (x,y)` it prints is not the region you asked for; the grid labels are
+   what to trust, not the origin.
 
    Note: the read tool downscales every image to 800px wide by default. That is
    fine for `--grid` captures; pass `image_max_width: 0` only when reading a
@@ -64,10 +85,14 @@ off by default, so if you are reading this the user has switched it on.
    `--from` accepts the grid copy too (`shot-1-grid.png`); it resolves back to
    the capture's sidecar automatically.
 
-5. Screenshot again to verify the result.
+   `type` and `key` go to whatever holds the focus, and the script cannot tell
+   where that is — a `key` aimed at a field that never got focus lands on another
+   panel and fails silently. Screenshot to confirm the focus is where you mean
+   it, and `click` the field once before typing or sending. If a field ignores
+   `type` altogether (common with IME-backed native inputs), paste instead —
+   `pbcopy` on macOS, `clip` on Windows — then `key "cmd+v"`.
 
-`<skill_dir>` is the absolute path to this skill's directory — it is listed under
-"Supporting Files" at the end of this document.
+5. Screenshot again to verify the result.
 
 ## Locating elements
 
@@ -102,15 +127,15 @@ scripts, no pixel counting):
 | `type "text"` | types into the focused field |
 | `key "cmd+shift+t" [--repeat N]` | |
 | `hold "shift" --duration 1.5` | holds modifiers while other actions run |
-| `cursor` | cursor position in the last screenshot's coordinates |
-| `activate "AppName" [--wait SECONDS]` | brings an app to the front via LaunchServices, no automation grant needed |
-| `doctor` | permission self-check |
+| `cursor` | the pointer position: Windows reads it, macOS reports `unknown` |
+| `activate "AppName" [--wait SECONDS]` | brings an app to the front, no automation grant needed |
+| `doctor` | platform, backend and permission self-check |
 
 ## Safety
 
 - Ask the user before changing system, browser or application settings, and before anything
   destructive (deleting files, sending messages, installing software).
-- Exit codes: `0` ok · `2` macOS permission missing · `3` screenshot state missing or stale ·
-  `4` disabled by `~/.clacky/computer.yml`.
+- Exit codes: `0` ok · `2` permission missing or backend unusable · `3` screenshot state
+  missing or stale · `4` disabled by `~/.clacky/computer.yml`.
 - On a permission error, relay the System Settings → Privacy & Security grant it asks for and
   wait for the user. Do not retry in a loop.

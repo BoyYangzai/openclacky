@@ -13,9 +13,14 @@ module Clacky
     #
     # The model reports coordinates in *image* space because that is what it can
     # see, so every capture records the transform back to global points.
-    # Raised by backends when a macOS TCC permission is missing. Lives here —
-    # not in the macOS backend — so the tool can rescue it on any platform.
-    class PermissionError < StandardError; end
+    # Base class for failures a backend raises and the CLI reports verbatim, so
+    # the CLI never has to know which platform it is talking to.
+    class BackendError < StandardError; end
+
+    # Raised by backends when the platform's screen or input permission is
+    # missing. Lives here — not in a backend — so callers can rescue it on any
+    # platform.
+    class PermissionError < BackendError; end
 
     module Geometry
       # One physical display. width/height are points, pixel_* are backing pixels.

@@ -100,10 +100,16 @@ RSpec.describe ComputerUse::CLI do
     end
 
     it "answers cursor instead of guessing a pointer position" do
-      code, stdout, = run("cursor")
+      code, stdout, stderr = run("cursor")
 
-      expect(code).to eq(ComputerUse::EXIT_OK)
-      expect(stdout).to include("unknown")
+      if RUBY_PLATFORM.include?("darwin")
+        expect(code).to eq(ComputerUse::EXIT_OK)
+        expect(stdout).to include("unknown")
+      else
+        # Plain Linux has no desktop backend: only macOS and WSL-on-Windows do.
+        expect(code).to eq(ComputerUse::EXIT_USAGE)
+        expect(stderr).to include("WSL")
+      end
     end
   end
 
@@ -316,20 +322,22 @@ RSpec.describe ComputerUse::CLI do
   end
 
   describe "doctor" do
-    it "reports the platform and, on macOS, the permission grants" do
+    it "reports the platform, backend and health" do
       code, stdout, stderr = run("doctor")
 
       expect(stdout).to include("platform: #{RUBY_PLATFORM}")
       expect(stdout).to include("kill switch: absent")
 
       if RUBY_PLATFORM.include?("darwin")
+        expect(stdout).to include("backend: MacOS")
         expect(stdout).to include("screen recording:")
         expect(stdout).to include("accessibility:")
         expect([ComputerUse::EXIT_OK, ComputerUse::EXIT_PERMISSION]).to include(code)
-        expect(stderr).to include("missing:") if code == ComputerUse::EXIT_PERMISSION
+        expect(stderr).to include("permission is missing") if code == ComputerUse::EXIT_PERMISSION
       else
+        # Plain Linux has no desktop backend: only macOS and WSL-on-Windows do.
         expect(code).to eq(ComputerUse::EXIT_USAGE)
-        expect(stdout).to include("unsupported")
+        expect(stderr).to include("WSL")
       end
     end
   end

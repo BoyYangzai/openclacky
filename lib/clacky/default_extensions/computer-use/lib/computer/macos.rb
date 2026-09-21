@@ -110,10 +110,12 @@ module Clacky
         @handles = nil
       end
 
-      # Last position this process moved the cursor to. macOS exposes no
-      # Fiddle-callable way to *read* the cursor (CGEventGetLocation returns a
-      # CGPoint by value), so this is best-effort tracking.
-      attr_reader :cursor
+      # macOS cannot read the pointer — CGEventGetLocation returns a CGPoint by
+      # value, which Fiddle cannot marshal — so callers always get nil. @cursor
+      # still tracks the last position this process moved to, for internal use.
+      def cursor
+        nil
+      end
 
       def screen_recording_allowed?
         API.CGPreflightScreenCaptureAccess.to_i != 0
@@ -151,6 +153,21 @@ module Clacky
 
         raise PermissionError,
               "macOS permission missing: #{missing.join(', ')}. " + PERMISSION_HINT
+      end
+
+      # [lines, problems] for `doctor` — what the backend can see, and what is
+      # stopping it from working.
+      def diagnostics
+        lines = [
+          "screen recording: #{screen_recording_allowed? ? 'granted' : 'MISSING'}",
+          "accessibility: #{accessibility_allowed? ? 'granted' : 'MISSING'}"
+        ]
+        displays.each do |display|
+          lines << "display #{display.id}#{display.main ? ' (main)' : ''}: " \
+                   "#{display.width}x#{display.height} points, origin #{display.origin_x},#{display.origin_y}"
+        end
+        problems = missing_permissions.map { |name| "#{name} permission is missing — #{PERMISSION_HINT}" }
+        [lines, problems]
       end
 
       # All active displays, main first. Origins come from the window server (see
@@ -344,7 +361,10 @@ module Clacky
 
       def hold_key(combo, duration: 1.0)
         require_accessibility!
-        modifiers, = Keycodes.parse(combo)
+        modifiers, key = Keycodes.parse(combo)
+        # `hold "shift"` names a lone modifier; parse reads a single part as the
+        # key, so fold it back into the modifier list.
+        modifiers = [key] if modifiers.empty? && Keycodes.modifier?(key)
         codes = modifiers.map { |m| Keycodes.modifier_keycode(m) }.compact
         raise ArgumentError, "no modifier keys in #{combo.inspect}" if codes.empty?
 
