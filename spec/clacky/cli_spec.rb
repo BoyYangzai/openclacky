@@ -5,6 +5,33 @@ require "fileutils"
 require "pathname"
 
 RSpec.describe Clacky::CLI do
+  describe "task resource option" do
+    around do |example|
+      previous = ENV["CLACKY_TASK_CGROUP"]
+      begin
+        example.run
+      ensure
+        # ClimateControl preserves changes made inside its block by the code
+        # under test. CLI#server sets this variable, so restore it explicitly.
+        ENV["CLACKY_TASK_CGROUP"] = previous
+      end
+    end
+
+    it "validates the delegated group and passes configuration through the worker environment" do
+      require "clacky/server/server_master"
+      allow($stderr).to receive(:isatty).and_return(true)
+      allow(Clacky::Telemetry).to receive(:startup!)
+      expect(Clacky::Utils::ResourceGroup).to receive(:validate!).with("/sys/fs/cgroup/tasks")
+      allow(Clacky::Server::Master).to receive(:new) do
+        expect(ENV["CLACKY_TASK_CGROUP"]).to eq("/sys/fs/cgroup/tasks")
+        double("master", run: nil)
+      end
+      ClimateControl.modify("CLACKY_WORKER" => nil, "CLACKY_TASK_CGROUP" => nil) do
+        described_class.start(["server", "--task-cgroup", "/sys/fs/cgroup/tasks"])
+      end
+    end
+  end
+
   describe "server strict port option" do
     it "passes the parsed flag to the master and preserves it for worker restarts" do
       require "clacky/server/server_master"

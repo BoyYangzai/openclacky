@@ -1411,6 +1411,7 @@ module Clacky
     LONGDESC
     option :host, type: :string, aliases: ["-b", "--bind"], default: "127.0.0.1", desc: "Bind host (default: 127.0.0.1)"
     option :port, type: :numeric, aliases: "-p", default: 7070, desc: "Listen port (default: 7070)"
+    option :task_cgroup, type: :string, desc: "Linux cgroup v2 parent for terminal and browser MCP workloads"
     option :strict_port, type: :boolean, default: false,
            desc: "Fail if the requested port is occupied instead of trying fallback ports"
     option :brand_test, type: :boolean, default: false,
@@ -1428,6 +1429,12 @@ module Clacky
       if options[:help]
         invoke :help, ["server"]
         return
+      end
+
+      if options[:task_cgroup]
+        require_relative "utils/resource_group"
+        Clacky::Utils::ResourceGroup.validate!(options[:task_cgroup])
+        ENV["CLACKY_TASK_CGROUP"] = options[:task_cgroup]
       end
 
       # ── Security gate ──────────────────────────────────────────────────────
