@@ -678,9 +678,9 @@ module Clacky
         lines
       end
 
-      # Serialize only the lightweight UI metadata needed to reconstruct file
-      # badges after compression. File paths, previews, sizes, MIME types, and
-      # contents deliberately stay out of the chunk archive.
+      # Serialize lightweight UI metadata for file badges after compression.
+      # By default only name + type; with compression_archive_retain_paths, allowlisted
+      # sandbox paths (and allowlisted preview_path) may be included. Sizes/contents never.
       def display_files_for_archive(msg)
         files = Array(msg[:display_files]).dup
         Array(msg[:content]).each do |block|
@@ -688,12 +688,14 @@ module Clacky
           next unless %w[image image_url].include?((block[:type] || block["type"]).to_s)
 
           name = block[:image_name] || block["image_name"]
+          image_path = block[:image_path] || block["image_path"]
           if name.nil? || name.to_s.strip.empty?
-            path = block[:image_path] || block["image_path"]
-            name = File.basename(path.to_s).sub(/\A[0-9a-f]{16}_/, "") unless path.to_s.empty?
+            name = File.basename(image_path.to_s).sub(/\A[0-9a-f]{16}_/, "") unless image_path.to_s.empty?
           end
           name = "image" if name.nil? || name.to_s.strip.empty?
-          files << { name: name, type: "image" }
+          entry = { name: name, type: "image" }
+          merge_retainable_path!(entry, image_path)
+          files << entry
         end
 
         files.filter_map do |file|
@@ -704,8 +706,26 @@ module Clacky
 
           type = file[:type] || file["type"] || "file"
           type = "file" if type.to_s.strip.empty?
-          { name: name.to_s, type: type.to_s }
-        end.uniq { |file| [file[:name], file[:type]] }
+          entry = { name: name.to_s, type: type.to_s }
+          merge_retainable_path!(entry, file[:path] || file["path"])
+          preview = file[:preview_path] || file["preview_path"]
+          merge_retainable_preview!(entry, preview)
+          entry
+        end.uniq { |file| [file[:name], file[:type], file[:path]] }
+      end
+
+      private def merge_retainable_path!(entry, path)
+        return unless Clacky::CompressionArchivePaths.retain_paths_enabled?(@config)
+        return unless Clacky::CompressionArchivePaths.retainable?(path)
+
+        entry[:path] = path.to_s
+      end
+
+      private def merge_retainable_preview!(entry, preview_path)
+        return unless Clacky::CompressionArchivePaths.retain_paths_enabled?(@config)
+        return unless Clacky::CompressionArchivePaths.retainable?(preview_path)
+
+        entry[:preview_path] = preview_path.to_s
       end
 
       # Once an image has a badge in the archive, omit the generic [image_url]

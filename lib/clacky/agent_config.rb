@@ -161,6 +161,7 @@ module Clacky
     attr_accessor :input_behavior, :permission_mode, :max_tokens, :verbose,
                   :enable_compression, :enable_idle_compression, :enable_prompt_caching,
                   :compression_threshold, :message_count_threshold,
+                  :compression_archive_retain_paths,
                   :models, :current_model_index, :current_model_id,
                   :memory_update_enabled, :skill_evolution,
                   :max_running_agents, :max_idle_agents,
@@ -184,6 +185,11 @@ module Clacky
       # Message-count threshold that also triggers compression, independent of token count.
       # Guards against pathological histories with many tiny messages.
       @message_count_threshold = options[:message_count_threshold] || DEFAULT_MESSAGE_COUNT_THRESHOLD
+      # Opt-in: keep allowlisted sandbox file paths in compressed chunk metadata
+      # (_Display files:_). Default off so exports stay name/type only.
+      @compression_archive_retain_paths =
+        options[:compression_archive_retain_paths] == true ||
+        options[:compression_archive_retain_paths] == "true"
 
       # Models configuration
       @models = options[:models] || []
@@ -455,6 +461,7 @@ module Clacky
     CONFIG_SETTINGS_KEYS = %w[
       enable_compression enable_idle_compression enable_prompt_caching
       compression_threshold message_count_threshold
+      compression_archive_retain_paths
       memory_update_enabled input_behavior
       skill_evolution max_running_agents max_idle_agents
       default_working_dir
@@ -475,6 +482,7 @@ module Clacky
         "enable_prompt_caching" => @enable_prompt_caching,
         "compression_threshold" => @compression_threshold,
         "message_count_threshold" => @message_count_threshold,
+        "compression_archive_retain_paths" => @compression_archive_retain_paths,
         "memory_update_enabled" => @memory_update_enabled,
         "skill_evolution" => @skill_evolution,
         "max_running_agents" => @max_running_agents,
@@ -1470,6 +1478,36 @@ module Clacky
       models.each { |m| m["id"] ||= SecureRandom.uuid }
 
       models
+    end
+  end
+
+  # Allowlist for optional path retention in compressed chunk MD (_Display files:_).
+  # Used when writing and replaying chunk archives (MessageCompressorHelper,
+  # SessionSerializer). Session exports may leave the machine; only sandbox-local
+  # upload dirs and /workspace/ paths are kept.
+  module CompressionArchivePaths
+    module_function
+
+    def retain_paths_enabled?(config)
+      config&.respond_to?(:compression_archive_retain_paths) &&
+        config.compression_archive_retain_paths
+    end
+
+    def retainable?(path)
+      return false if path.nil?
+
+      normalized = path.to_s
+      return false if normalized.strip.empty?
+
+      prefixes.any? { |prefix| normalized.start_with?(prefix) }
+    end
+
+    def prefixes
+      @prefixes ||= [
+        File.join(Dir.tmpdir, "clacky-uploads"),
+        "/tmp/clacky-uploads",
+        "/workspace/"
+      ].freeze
     end
   end
 end
