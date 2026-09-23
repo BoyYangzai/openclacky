@@ -15,6 +15,8 @@ RSpec.describe "attachment metadata across compression" do
     end.new
   end
 
+  let(:upload_path) { File.join(Dir.tmpdir, "clacky-uploads", "photo.png") }
+
   it "archives only attachment name and type" do
     md = writer.render_message_sections([
       {
@@ -37,59 +39,38 @@ RSpec.describe "attachment metadata across compression" do
     expect(md).not_to include("private file contents")
   end
 
-  context "with compression_archive_retain_paths enabled" do
-    let(:retain_config) { Clacky::AgentConfig.new(compression_archive_retain_paths: true) }
-    let(:upload_path) { File.join(Dir.tmpdir, "clacky-uploads", "photo.png") }
-    let(:writer) do
-      Class.new do
-        include Clacky::Agent::MessageCompressorHelper
-        attr_reader :config
-        def initialize(config); @config = config; end
-        public :render_message_sections
-      end.new(retain_config)
-    end
-    let(:reader) do
-      Class.new do
-        include Clacky::Agent::SessionSerializer
-        attr_reader :config
-        def initialize(config); @config = config; end
-        public :extract_display_files_from_text
-      end.new(retain_config)
-    end
+  it "archives allowlisted sandbox paths in chunk metadata" do
+    md = writer.render_message_sections([
+      {
+        role: "user",
+        content: "",
+        display_files: [{ name: "photo.png", type: "image", path: upload_path }]
+      }
+    ]).join("\n")
 
-    it "archives allowlisted sandbox paths in chunk metadata" do
-      md = writer.render_message_sections([
-        {
-          role: "user",
-          content: "",
-          display_files: [{ name: "photo.png", type: "image", path: upload_path }]
-        }
-      ]).join("\n")
+    expect(md).to include("_Display files:")
+    expect(md).to include(upload_path)
+    expect(md).to include('"name":"photo.png"')
+  end
 
-      expect(md).to include("_Display files:")
-      expect(md).to include(upload_path)
-      expect(md).to include('"name":"photo.png"')
-    end
+  it "restores allowlisted paths when replaying chunk text" do
+    line = "_Display files: [{\"name\":\"photo.png\",\"type\":\"image\",\"path\":\"#{upload_path}\"}]_"
+    _text, files = reader.extract_display_files_from_text(line)
 
-    it "restores allowlisted paths when replaying chunk text" do
-      line = "_Display files: [{\"name\":\"photo.png\",\"type\":\"image\",\"path\":\"#{upload_path}\"}]_"
-      _text, files = reader.extract_display_files_from_text(line)
+    expect(files).to eq([{ name: "photo.png", type: "image", path: upload_path }])
+  end
 
-      expect(files).to eq([{ name: "photo.png", type: "image", path: upload_path }])
-    end
+  it "still omits non-allowlisted paths from chunk metadata" do
+    md = writer.render_message_sections([
+      {
+        role: "user",
+        content: "",
+        display_files: [{ name: "secret.csv", type: "csv", path: "/tmp/private/secret.csv" }]
+      }
+    ]).join("\n")
 
-    it "still omits non-allowlisted paths from chunk metadata" do
-      md = writer.render_message_sections([
-        {
-          role: "user",
-          content: "",
-          display_files: [{ name: "secret.csv", type: "csv", path: "/tmp/private/secret.csv" }]
-        }
-      ]).join("\n")
-
-      expect(md).to include('_Display files: [{"name":"secret.csv","type":"csv"}]_')
-      expect(md).not_to include("/tmp/private")
-    end
+    expect(md).to include('_Display files: [{"name":"secret.csv","type":"csv"}]_')
+    expect(md).not_to include("/tmp/private")
   end
 
   it "restores lightweight metadata and strips the archive marker from text" do

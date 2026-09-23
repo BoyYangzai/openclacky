@@ -576,8 +576,8 @@ module Clacky
 
       # Pull lightweight attachment badge metadata out of a chunk section.
       # The marker is internal archive data and must not appear in replayed text.
-      # By default only name + type are restored; when compression_archive_retain_paths
-      # is enabled, allowlisted sandbox path and preview_path fields are restored too.
+      # Name and type are always restored; allowlisted sandbox path and preview_path
+      # fields are restored when present in the chunk marker.
       def extract_display_files_from_text(text)
         return [text, []] unless text.include?("_Display files:")
 
@@ -596,13 +596,11 @@ module Clacky
             type = file["type"] || file[:type] || "file"
             type = "file" if type.to_s.strip.empty?
             entry = { name: name.to_s, type: type.to_s }
-            if Clacky::CompressionArchivePaths.retain_paths_enabled?(@config)
-              path = file["path"] || file[:path]
-              entry[:path] = path.to_s if Clacky::CompressionArchivePaths.retainable?(path)
-              preview = file["preview_path"] || file[:preview_path]
-              if Clacky::CompressionArchivePaths.retainable?(preview)
-                entry[:preview_path] = preview.to_s
-              end
+            path = file["path"] || file[:path]
+            entry[:path] = path.to_s if Clacky::CompressionArchivePaths.retainable?(path)
+            preview = file["preview_path"] || file[:preview_path]
+            if Clacky::CompressionArchivePaths.retainable?(preview)
+              entry[:preview_path] = preview.to_s
             end
             files << entry
           end

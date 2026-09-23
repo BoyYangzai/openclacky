@@ -9,7 +9,7 @@ module Clacky
       # Token & message-count thresholds are owned by AgentConfig — see
       # AgentConfig::DEFAULT_COMPRESSION_THRESHOLD / DEFAULT_MESSAGE_COUNT_THRESHOLD.
       # The constants below are tuning parameters not currently exposed as user config.
-      MAX_RECENT_MESSAGES = 20  # Keep this many recent message pairs intact
+      MAX_RECENT_MESSAGES = 3  # Keep this many recent message pairs intact
       TARGET_COMPRESSED_TOKENS = 10_000  # Target size after compression
       IDLE_COMPRESSION_THRESHOLD = 20_000  # Minimum messages needed for idle compression
 
@@ -678,9 +678,9 @@ module Clacky
         lines
       end
 
-      # Serialize lightweight UI metadata for file badges after compression.
-      # By default only name + type; with compression_archive_retain_paths, allowlisted
-      # sandbox paths (and allowlisted preview_path) may be included. Sizes/contents never.
+      # Serialize lightweight UI metadata for file badges after compression (name, type,
+      # and allowlisted sandbox path/preview_path). File contents and sizes never enter
+      # the chunk archive.
       def display_files_for_archive(msg)
         files = Array(msg[:display_files]).dup
         Array(msg[:content]).each do |block|
@@ -715,14 +715,12 @@ module Clacky
       end
 
       private def merge_retainable_path!(entry, path)
-        return unless Clacky::CompressionArchivePaths.retain_paths_enabled?(@config)
         return unless Clacky::CompressionArchivePaths.retainable?(path)
 
         entry[:path] = path.to_s
       end
 
       private def merge_retainable_preview!(entry, preview_path)
-        return unless Clacky::CompressionArchivePaths.retain_paths_enabled?(@config)
         return unless Clacky::CompressionArchivePaths.retainable?(preview_path)
 
         entry[:preview_path] = preview_path.to_s

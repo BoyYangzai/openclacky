@@ -98,16 +98,6 @@ RSpec.describe "Clacky::AgentConfig#reload!" do
     expect(config.models_configured?).to be true
   end
 
-  it "reloads compression_archive_retain_paths from disk" do
-    write_config(initial_models, "compression_archive_retain_paths" => true)
-    config = Clacky::AgentConfig.load(config_file)
-    expect(config.compression_archive_retain_paths).to be true
-
-    write_config(initial_models, "compression_archive_retain_paths" => false)
-    expect(config.reload!(config_file)).to be true
-    expect(config.compression_archive_retain_paths).to be false
-  end
-
   it "keeps the in-memory config when the file is corrupt" do
     write_config(initial_models)
     config = Clacky::AgentConfig.load(config_file)
